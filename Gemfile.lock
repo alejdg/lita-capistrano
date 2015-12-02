@@ -32,6 +32,7 @@ GEM
       multi_json
     multi_json (1.11.2)
     multipart-post (2.0.0)
+    net-ssh (3.0.1)
     puma (2.14.0)
     rack (1.6.4)
     rb-readline (0.5.3)
@@ -51,3 +52,7 @@ PLATFORMS
 DEPENDENCIES
   lita
   lita-slack
+  net-ssh
+
+BUNDLED WITH
+   1.10.6

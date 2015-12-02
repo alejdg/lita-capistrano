@@ -15,3 +15,4 @@ gem "lita"
 #
 
 gem "lita-slack"
+gem "net-ssh"

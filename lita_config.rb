@@ -1,9 +1,16 @@
+require_relative 'lita-capistrano/lib/lita/handlers/capistrano.rb'
+
 Lita.configure do |config|
   config.robot.name = "Lita"
   config.robot.log_level = :debug
   config.robot.adapter = :slack
   config.adapters.slack.token = ""
   config.redis[:host] = "redis"
+  config.robot.admins = []
+
+  config.handlers.capistrano.server = ""
+  config.handlers.capistrano.server_user = ""
+  config.handlers.capistrano.server_password = ""
 
   # The name your robot will use.
   #config.robot.name = "Lita"
