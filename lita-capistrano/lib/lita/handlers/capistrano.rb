@@ -6,9 +6,7 @@ module Lita
       config :server, type: String, required: true
       config :server_user, type: String, required: true
       config :server_password, type: String, required: true
-      config :test_server, type: String
-      config :test_server_user, type: String
-      config :test_server_password, type: String
+      config :deploy_tree, type: Hash, required: true
 
       route(
         /^capistrano\s+(.+)\s+list$/,
@@ -24,12 +22,6 @@ module Lita
         help: { "deploy AREA ENV TAG " => "Executa deploy nos ambientes internos"}
       )
 
-      # route(
-      #   /^capistrano\s+(.+)/,
-      #   :cap, command: true,
-      #   restrict_to: [:admins],
-      #   help: { "capistrano ENV METHOD " => "Execute a capistrano task in a defined environment"}
-      # )
 
       DEPLOY_PROPERTIES = {
         commerce: {
@@ -82,11 +74,12 @@ module Lita
           return response.reply("O ambiente informado é inválido.")
         end
 
-        dir = DEPLOY_PROPERTIES[:commerce][area.to_sym][:dir]
+        dir = config.deploy_tree[:commerce][area.to_sym][:dir]
 
         response.reply("Deploy da tag #{tag} iniciado no ambiente #{env}.")
         output = deploy(dir, env, tag)
-        if output.lines.last.include? "deploy:restart"
+        # The deploy:restart could be in two positions depending on the 
+        if (output.lines.last.include? "deploy:restart") || (output.lines.last(5)[0].include? "deploy:restart")
           return response.reply("Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
         elsif output.lines.last.include? "status code 32768"
           return response.reply("A tag #{tag} informada não existe. Deploy não realizado.")
@@ -96,11 +89,11 @@ module Lita
       end
 
       def area_exists?(area)
-        DEPLOY_PROPERTIES[:commerce].include?(area.to_sym)
+        config.deploy_tree[:commerce].include?(area.to_sym)
       end
 
       def env_exists?(area, env)
-        DEPLOY_PROPERTIES[:commerce][area.to_sym][:envs].include?(env)
+        config.deploy_tree[:commerce][area.to_sym][:envs].include?(env)
       end
 
       def deploy(dir, env, tag)
