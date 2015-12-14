@@ -1,0 +1,14 @@
+web:
+  container_name: lita-dev
+  build: .
+  volumes:
+   - //c/Users/agomes/workspace/Ruby/lita-chatops:/usr/src/app
+  links:
+   - redis
+   - mongodb
+  tty: true
+  stdin_open: true
+redis:
+  image: redis
+mongodb:
+    image: mongo
