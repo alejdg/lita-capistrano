@@ -22,29 +22,6 @@ module Lita
         help: { "deploy AREA ENV TAG " => "Executa deploy nos ambientes internos"}
       )
 
-
-      DEPLOY_PROPERTIES = {
-        commerce: {
-          teste: {
-            dir: "/home/deploy/deploy_teste/deploy_commerce",
-            envs: [
-              "teste",
-              "teste2",
-              "teste3"
-            ]
-          },
-          staging: {
-            dir: "/home/deploy/staging/commerce",
-            envs: [
-              "staging_commerce",
-              "staging2_commerce",
-              "staging_exclusive",
-              "staging2_exclusive"
-            ]
-          }
-        }
-      }
-
       def cap(response)
         env = response.matches[0][0]
         method = response.matches[0][1]
@@ -78,7 +55,7 @@ module Lita
 
         response.reply("Deploy da tag #{tag} iniciado no ambiente #{env}.")
         output = deploy(dir, env, tag)
-        # The deploy:restart could be in two positions depending on the 
+        # The deploy:restart could be in two positions depending on the
         if (output.lines.last.include? "deploy:restart") || (output.lines.last(5)[0].include? "deploy:restart")
           return response.reply("Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
         elsif output.lines.last.include? "status code 32768"
