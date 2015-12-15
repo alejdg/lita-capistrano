@@ -16,3 +16,4 @@ gem "lita"
 
 gem "lita-slack"
 gem "net-ssh"
+gem 'mongo', '~> 2.1'

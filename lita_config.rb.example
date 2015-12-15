@@ -9,6 +9,12 @@ Lita.configure do |config|
   config.redis[:host] = "redis.example.com"
   config.robot.admins = []
 
+  # lita-deploy-tracker config
+  config.handlers.deploy_tracker.host = "mongodb"
+  config.handlers.deploy_tracker.user = "lita"
+  config.handlers.deploy_tracker.password = "secret"
+
+  # lita-capistrano config
   config.handlers.capistrano.server = "capistrano-deploy.com"
   config.handlers.capistrano.server_user = "lita"
   config.handlers.capistrano.server_password = "secret"
