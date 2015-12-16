@@ -53,8 +53,12 @@ module Lita
 
         dir = config.deploy_tree[:commerce][area.to_sym][:dir]
 
+        # Deploy start
         response.reply("Deploy da tag #{tag} iniciado no ambiente #{env}.")
+        start_time = Time.now
+        robot.trigger(:deploy_started, app: 'commerce', env: env, tag: tag, start_time: start_time)
         output = deploy(dir, env, tag)
+
         # The deploy:restart could be in two positions depending on the
         if (output.lines.last.include? "deploy:restart") || (output.lines.last(5)[0].include? "deploy:restart")
           return response.reply("Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
