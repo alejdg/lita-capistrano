@@ -8,16 +8,12 @@ module Lita
       config :password, type: String, required: true
 
       on :deploy_started, :register_deploy
+      on :deploy_finished, :update_deploy
 
       def register_deploy(payload)
-        app = payload[:app]
-        area = payload[:area]
-        env = payload[:env]
-        tag = payload[:tag]
-
         db = mongo_client
 
-        result = db[:deploys].insert_one ({
+        db[:deploys].insert_one ({
           app: payload[:app],
           area: payload[:area],
           env: payload[:env],
@@ -25,6 +21,30 @@ module Lita
           start_time: payload[:start_time],
           status: 'in progress'
           })
+      end
+
+      def update_deploy(payload)
+        db = mongo_client
+        db[:deploys].update_one({
+          app: payload[:app],
+          area: payload[:area],
+          env: payload[:env],
+          tag: payload[:tag],
+          start_time: payload[:start_time],
+          status: 'in progress'
+        },
+        {
+          app: payload[:app],
+          area: payload[:area],
+          env: payload[:env],
+          tag: payload[:tag],
+          start_time: payload[:start_time],
+          finish_time: payload[:finish_time],
+          status: payload[:status]
+        })
+        db[:deploys].find().each do |doc|
+          p doc
+        end
 
       end
 

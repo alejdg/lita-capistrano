@@ -56,15 +56,45 @@ module Lita
         # Deploy start
         response.reply("Deploy da tag #{tag} iniciado no ambiente #{env}.")
         start_time = Time.now
-        robot.trigger(:deploy_started, app: 'commerce', env: env, tag: tag, start_time: start_time)
+        robot.trigger(:deploy_started,
+                      app: 'commerce',
+                      env: env,
+                      tag: tag,
+                      start_time: start_time)
+
         output = deploy(dir, env, tag)
+        # After deploy stopped
+        finish_time =Time.now
 
         # The deploy:restart could be in two positions depending on the
-        if (output.lines.last.include? "deploy:restart") || (output.lines.last(5)[0].include? "deploy:restart")
+        # capistrano config
+        if (output.lines.last.include? "deploy:restart") ||
+           (output.lines.last(5)[0].include? "deploy:restart")
+          robot.trigger(:deploy_finished,
+                        app: 'commerce',
+                        env: env,
+                        tag: tag,
+                        start_time: start_time,
+                        finish_time: finish_time,
+                        status: 'success')
           return response.reply("Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
         elsif output.lines.last.include? "status code 32768"
+          robot.trigger(:deploy_finished,
+                        app: 'commerce',
+                        env: env,
+                        tag: tag,
+                        start_time: start_time,
+                        finish_time: finish_time,
+                        status: 'invalid tag')
           return response.reply("A tag #{tag} informada não existe. Deploy não realizado.")
         else
+          robot.trigger(:deploy_finished,
+                        app: 'commerce', 
+                        env: env,
+                        tag: tag,
+                        start_time: start_time,
+                        finish_time: finish_time,
+                        status: 'error')
           return response.reply("Ocorreu um erro na execução do deploy da tag #{tag} no ambiente #{env}.")
         end
       end
