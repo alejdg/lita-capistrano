@@ -31,8 +31,7 @@ module Lita
           area: payload[:area],
           env: payload[:env],
           tag: payload[:tag],
-          start_time: payload[:start_time],
-          status: 'in progress'
+          start_time: payload[:start_time]
         },
         {
           app: payload[:app],
@@ -56,16 +55,13 @@ module Lita
                                     area: payload[:area],
                                     env: payload[:env],
                                     status: 'in progress'}).limit(1).count
-        p "Result é igual a ======> #{result}"
 
         if result > 0
-          robot.trigger(:stop_deploy,
-                        msg: 'Já existe um deploy dessa aplicação sendo'\
-                        'executado nessa area. Aguarde ele ser finalizado',
-                        response: payload[:response])
-        #   robot.trigger(:deploy_in_progress_response, result: true)
-        # else
-        #   robot.trigger(:deploy_in_progress_response, result: false)
+          payload[:msg] = 'Já existe um deploy dessa aplicação sendo'\
+                          'executado nessa area. Aguarde ele ser finalizado'
+          robot.trigger(:deploy_aborted, payload)
+        else
+          robot.trigger(:deploy_checked, payload)
         end
 
       end

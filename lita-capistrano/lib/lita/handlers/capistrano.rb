@@ -8,7 +8,8 @@ module Lita
       config :server_password, type: String, required: true
       config :deploy_tree, type: Hash, required: true
 
-      on :stop_deploy, :interrupt_deploy
+      on :deploy_checked, :deploy_exec
+      on :deploy_aborted, :deploy_abort
 
       route(
         /^capistrano\s+(.+)\s+list$/,
@@ -54,10 +55,38 @@ module Lita
           return response.reply("O ambiente informado é inválido.")
         end
 
-        dir = config.deploy_tree[:commerce][area.to_sym][:dir]
 
         # Pre deploy check
-        deploy_in_progress?(app, area, env, response)
+        deploy_in_progress?(app, area, env, tag, response)
+      end
+
+
+      def area_exists?(area)
+        config.deploy_tree[:commerce].include?(area.to_sym)
+      end
+
+      def env_exists?(area, env)
+        config.deploy_tree[:commerce][area.to_sym][:envs].include?(env)
+      end
+
+      # If a deploy is in progress the deploy_tracker handler will return a
+      # reponse to chat and will interrupt further using the interrupt_deploy
+      # method
+      def deploy_in_progress?(app, area, env, tag, response)
+        robot.trigger(:deploy_in_progress?, app: app, area: area, env: env, tag: tag, response: response)
+      end
+
+      def deploy_abort(payload)
+        return payload[:response].reply(payload[:msg])
+      end
+
+      def deploy_exec(payload)
+        app = payload[:app]
+        area = payload[:area]
+        env = payload[:env]
+        tag = payload[:tag]
+        response = payload[:response]
+        dir = config.deploy_tree[app.to_sym][area.to_sym][:dir]
 
         # Deploy start
         response.reply("Deploy da tag #{tag} iniciado no ambiente #{env}.")
@@ -75,8 +104,7 @@ module Lita
 
         # The deploy:restart could be in two positions depending on the
         # capistrano config
-        if (output.lines.last.include? "deploy:restart") ||
-           (output.lines.last(5)[0].include? "deploy:restart")
+        if (output.lines.last.include? "deploy:restart") || (output.lines.last(5)[0].include? "deploy:restart")
           robot.trigger(:deploy_finished,
                         app: app,
                         area: area,
@@ -85,10 +113,16 @@ module Lita
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'success')
-          return response.reply("Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
+        return response.reply("Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
         elsif output.lines.last.include? "status code 32768"
+          p app
+          p area
+          p env
+          p tag
+
           robot.trigger(:deploy_finished,
                         app: app,
+                        area: area,
                         env: env,
                         tag: tag,
                         start_time: start_time,
@@ -98,6 +132,7 @@ module Lita
         else
           robot.trigger(:deploy_finished,
                         app: app,
+                        area: area,
                         env: env,
                         tag: tag,
                         start_time: start_time,
@@ -105,26 +140,6 @@ module Lita
                         status: 'error')
           return response.reply("Ocorreu um erro na execução do deploy da tag #{tag} no ambiente #{env}.")
         end
-      end
-
-
-      def area_exists?(area)
-        config.deploy_tree[:commerce].include?(area.to_sym)
-      end
-
-      def env_exists?(area, env)
-        config.deploy_tree[:commerce][area.to_sym][:envs].include?(env)
-      end
-
-      # If a deploy is in progress the deploy_tracker handler will return a
-      # reponse to chat and will interrupt further using the interrupt_deploy
-      # method
-      def deploy_in_progress?(app, area, env, response)
-        robot.trigger(:deploy_in_progress?, app: app, area: area, env: env, response: response)
-      end
-
-      def interrupt_deploy(payload)
-        return payload[:response].reply(payload[:msg])
       end
 
       def deploy(dir, env, tag)
