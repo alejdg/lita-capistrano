@@ -9,6 +9,7 @@ module Lita
 
       on :deploy_started, :register_deploy
       on :deploy_finished, :update_deploy
+      on :deploy_in_progress?, :check_deploy_in_progress
 
       def register_deploy(payload)
         db = mongo_client
@@ -44,6 +45,27 @@ module Lita
         })
         db[:deploys].find().each do |doc|
           p doc
+        end
+
+      end
+
+      def check_deploy_in_progress(payload)
+        db = mongo_client
+
+        result = db[:deploys].find({app: payload[:app],
+                                    area: payload[:area],
+                                    env: payload[:env],
+                                    status: 'in progress'}).limit(1).count
+        p "Result é igual a ======> #{result}"
+
+        if result > 0
+          robot.trigger(:stop_deploy,
+                        msg: 'Já existe um deploy dessa aplicação sendo'\
+                        'executado nessa area. Aguarde ele ser finalizado',
+                        response: payload[:response])
+        #   robot.trigger(:deploy_in_progress_response, result: true)
+        # else
+        #   robot.trigger(:deploy_in_progress_response, result: false)
         end
 
       end

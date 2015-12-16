@@ -8,6 +8,8 @@ module Lita
       config :server_password, type: String, required: true
       config :deploy_tree, type: Hash, required: true
 
+      on :stop_deploy, :interrupt_deploy
+
       route(
         /^capistrano\s+(.+)\s+list$/,
         :cap_list, command: true,
@@ -40,6 +42,7 @@ module Lita
       end
 
       def deploy_test(response)
+        app = 'commerce'
         area = response.matches[0][0]
         env = response.matches[0][1]
         tag = response.matches[0][2]
@@ -53,11 +56,15 @@ module Lita
 
         dir = config.deploy_tree[:commerce][area.to_sym][:dir]
 
+        # Pre deploy check
+        deploy_in_progress?(app, area, env, response)
+
         # Deploy start
         response.reply("Deploy da tag #{tag} iniciado no ambiente #{env}.")
         start_time = Time.now
         robot.trigger(:deploy_started,
-                      app: 'commerce',
+                      app: app,
+                      area: area,
                       env: env,
                       tag: tag,
                       start_time: start_time)
@@ -71,7 +78,8 @@ module Lita
         if (output.lines.last.include? "deploy:restart") ||
            (output.lines.last(5)[0].include? "deploy:restart")
           robot.trigger(:deploy_finished,
-                        app: 'commerce',
+                        app: app,
+                        area: area,
                         env: env,
                         tag: tag,
                         start_time: start_time,
@@ -80,7 +88,7 @@ module Lita
           return response.reply("Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
         elsif output.lines.last.include? "status code 32768"
           robot.trigger(:deploy_finished,
-                        app: 'commerce',
+                        app: app,
                         env: env,
                         tag: tag,
                         start_time: start_time,
@@ -89,7 +97,7 @@ module Lita
           return response.reply("A tag #{tag} informada não existe. Deploy não realizado.")
         else
           robot.trigger(:deploy_finished,
-                        app: 'commerce', 
+                        app: app,
                         env: env,
                         tag: tag,
                         start_time: start_time,
@@ -99,12 +107,24 @@ module Lita
         end
       end
 
+
       def area_exists?(area)
         config.deploy_tree[:commerce].include?(area.to_sym)
       end
 
       def env_exists?(area, env)
         config.deploy_tree[:commerce][area.to_sym][:envs].include?(env)
+      end
+
+      # If a deploy is in progress the deploy_tracker handler will return a
+      # reponse to chat and will interrupt further using the interrupt_deploy
+      # method
+      def deploy_in_progress?(app, area, env, response)
+        robot.trigger(:deploy_in_progress?, app: app, area: area, env: env, response: response)
+      end
+
+      def interrupt_deploy(payload)
+        return payload[:response].reply(payload[:msg])
       end
 
       def deploy(dir, env, tag)
