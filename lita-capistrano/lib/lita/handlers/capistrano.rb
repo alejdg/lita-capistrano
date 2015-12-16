@@ -20,7 +20,7 @@ module Lita
 
       route(
         /^deploy\s+(.+)\s+(.+)\s+(.+)/,
-        :deploy_test, command: true,
+        :deploy_request, command: true,
         restrict_to: [:admins, :deploy_test],
         help: { "deploy AREA ENV TAG " => "Executa deploy nos ambientes internos"}
       )
@@ -42,7 +42,7 @@ module Lita
         response.reply(output)
       end
 
-      def deploy_test(response)
+      def deploy_request(response)
         app = 'commerce'
         area = response.matches[0][0]
         env = response.matches[0][1]
@@ -54,7 +54,6 @@ module Lita
         unless env_exists?(area, env)
           return response.reply("O ambiente informado é inválido.")
         end
-
 
         # Pre deploy check
         deploy_in_progress?(app, area, env, tag, response)
@@ -98,6 +97,7 @@ module Lita
                       tag: tag,
                       start_time: start_time)
 
+        # Deploy execution
         output = deploy(dir, env, tag)
         # After deploy stopped
         finish_time =Time.now
@@ -115,11 +115,6 @@ module Lita
                         status: 'success')
         return response.reply("Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
         elsif output.lines.last.include? "status code 32768"
-          p app
-          p area
-          p env
-          p tag
-
           robot.trigger(:deploy_finished,
                         app: app,
                         area: area,
