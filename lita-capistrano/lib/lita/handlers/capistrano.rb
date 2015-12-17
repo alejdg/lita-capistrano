@@ -2,6 +2,9 @@ module Lita
   module Handlers
     class Capistrano < Handler
       require 'net/ssh'
+      require 'json'
+      require 'yaml'
+      require 'pp'
 
       config :server, type: String, required: true
       config :server_user, type: String, required: true
@@ -12,41 +15,41 @@ module Lita
       on :deploy_aborted, :deploy_abort
 
       route(
-        /^capistrano\s+(.+)\s+list$/,
-        :cap_list, command: true,
-        restrict_to: [:admins],
-        help: { "capistrano APP list " => "List available commands for determined application"}
+        /^deploy\s+list/,
+        :deploy_list, command: false,
+        restrict_to: [:admins, :deploy_test],
+        help: { "deploy list [APP] " => "List available apps for deploy"}
       )
 
       route(
-        /^deploy\s+(.+)\s+(.+)\s+(.+)/,
+        /^deploy\s+(.+)\s+(.+)\s+(.+)\s+(.+)/,
         :deploy_request, command: true,
         restrict_to: [:admins, :deploy_test],
-        help: { "deploy AREA ENV TAG " => "Executa deploy nos ambientes internos"}
+        help: { "deploy APP AREA ENV TAG " => "Executa deploy"}
       )
 
-      def cap(response)
-        env = response.matches[0][0]
-        method = response.matches[0][1]
-
-        Net::SSH.start(config.server, config.server_user, :password => config.server_password) do |ssh|
-          @output = ssh.exec!("cap #{env} #{method}")
-        end
-
-        response.reply(@output)
+      def deploy_list_apps(response)
+        response.reply_privately('Available apps:')
+        response.reply_privately(config.deploy_tree.keys)
       end
 
-      def cap_list(response)
-        app = response.matches[0][0]
-        output = ssh_exec("cd /home/deploy/deploy_#{app}; cap -vT")
-        response.reply(output)
+      def deploy_list(response)
+        requested_app = response.args[1]
+        if requested_app.nil?
+          apps = config.deploy_tree.keys.join("\n")
+          response.reply_privately("Available apps:\n#{apps}")
+        else
+          # app_tree = JSON.pretty_generate(config.deploy_tree[requested_app.to_sym])
+          app_tree = get_app_tree(config.deploy_tree[requested_app.to_sym])
+          response.reply_privately("Available tree for #{requested_app}: \n #{app_tree}")
+        end
       end
 
       def deploy_request(response)
-        app = 'commerce'
-        area = response.matches[0][0]
-        env = response.matches[0][1]
-        tag = response.matches[0][2]
+        app = response.matches[0][0]
+        area = response.matches[0][1]
+        env = response.matches[0][2]
+        tag = response.matches[0][3]
 
         unless area_exists?(area)
           return response.reply("A área informada é inválida.")
@@ -66,6 +69,14 @@ module Lita
 
       def env_exists?(area, env)
         config.deploy_tree[:commerce][area.to_sym][:envs].include?(env)
+      end
+
+      def get_app_tree(config_tree)
+        app_tree = {}
+        config_tree.each do |key, value|
+          app_tree.store(key.to_s, value[:envs].map { |e| ">#{e}\n" }.join)
+        end
+        app_tree.flatten.map { |e| "#{e}\n" }.join
       end
 
       # If a deploy is in progress the deploy_tracker handler will return a
