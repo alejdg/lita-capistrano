@@ -19,6 +19,7 @@ module Lita
           area: payload[:area],
           env: payload[:env],
           tag: payload[:tag],
+          responsible: payload[:responsible],
           start_time: payload[:start_time],
           status: 'in progress'
           })
@@ -31,6 +32,7 @@ module Lita
           area: payload[:area],
           env: payload[:env],
           tag: payload[:tag],
+          responsible: payload[:responsible],
           start_time: payload[:start_time]
         },
         {
@@ -38,6 +40,7 @@ module Lita
           area: payload[:area],
           env: payload[:env],
           tag: payload[:tag],
+          responsible: payload[:responsible],
           start_time: payload[:start_time],
           finish_time: payload[:finish_time],
           status: payload[:status]

@@ -2,9 +2,6 @@ module Lita
   module Handlers
     class Capistrano < Handler
       require 'net/ssh'
-      require 'json'
-      require 'yaml'
-      require 'pp'
 
       config :server, type: String, required: true
       config :server_user, type: String, required: true
@@ -39,7 +36,6 @@ module Lita
           apps = config.deploy_tree.keys.join("\n")
           response.reply_privately("Available apps:\n#{apps}")
         else
-          # app_tree = JSON.pretty_generate(config.deploy_tree[requested_app.to_sym])
           app_tree = get_app_tree(config.deploy_tree[requested_app.to_sym])
           response.reply_privately("Available tree for #{requested_app}: \n #{app_tree}")
         end
@@ -99,13 +95,14 @@ module Lita
         dir = config.deploy_tree[app.to_sym][area.to_sym][:dir]
 
         # Deploy start
-        response.reply("Deploy da tag #{tag} iniciado no ambiente #{env}.")
+        response.reply("#{response.user.mention_name}: Deploy da tag #{tag} iniciado no ambiente #{env}.")
         start_time = Time.now
         robot.trigger(:deploy_started,
                       app: app,
                       area: area,
                       env: env,
                       tag: tag,
+                      responsible: response.user.mention_name
                       start_time: start_time)
 
         # Deploy execution
@@ -121,30 +118,33 @@ module Lita
                         area: area,
                         env: env,
                         tag: tag,
+                        responsible: response.user.mention_name
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'success')
-        return response.reply("Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
+        return response.reply("#{response.user.mention_name}: Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
         elsif output.lines.last.include? "status code 32768"
           robot.trigger(:deploy_finished,
                         app: app,
                         area: area,
                         env: env,
                         tag: tag,
+                        responsible: response.user.mention_name
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'invalid tag')
-          return response.reply("A tag #{tag} informada não existe. Deploy não realizado.")
+          return response.reply("#{response.user.mention_name}: A tag #{tag} informada não existe. Deploy não realizado.")
         else
           robot.trigger(:deploy_finished,
                         app: app,
                         area: area,
                         env: env,
                         tag: tag,
+                        responsible: response.user.mention_name
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'error')
-          return response.reply("Ocorreu um erro na execução do deploy da tag #{tag} no ambiente #{env}.")
+          return response.reply("#{response.user.mention_name}: Ocorreu um erro na execução do deploy da tag #{tag} no ambiente #{env}.")
         end
       end
 
