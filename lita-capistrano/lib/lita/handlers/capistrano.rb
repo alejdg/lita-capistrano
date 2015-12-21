@@ -102,7 +102,7 @@ module Lita
                       area: area,
                       env: env,
                       tag: tag,
-                      responsible: response.user.mention_name
+                      responsible: response.user.mention_name,
                       start_time: start_time)
 
         # Deploy execution
@@ -118,7 +118,7 @@ module Lita
                         area: area,
                         env: env,
                         tag: tag,
-                        responsible: response.user.mention_name
+                        responsible: response.user.mention_name,
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'success')
@@ -129,7 +129,7 @@ module Lita
                         area: area,
                         env: env,
                         tag: tag,
-                        responsible: response.user.mention_name
+                        responsible: response.user.mention_name,
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'invalid tag')
@@ -140,7 +140,7 @@ module Lita
                         area: area,
                         env: env,
                         tag: tag,
-                        responsible: response.user.mention_name
+                        responsible: response.user.mention_name,
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'error')
