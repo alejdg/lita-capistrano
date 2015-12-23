@@ -15,17 +15,18 @@ module Lita
       route(
         /^deploy\s+list/,
         :deploy_list, command: false,
-        restrict_to: [:admins, :deploy_test],
+        restrict_to: [:admins, :deploy],
         help: { "deploy list [APP] " => "List available apps for deploy"}
       )
 
       route(
         /^deploy\s+(.+)\s+(.+)\s+(.+)\s+(.+)/,
         :deploy_request, command: true,
-        restrict_to: [:admins, :deploy_test],
+        restrict_to: [:admins, :deploy],
         help: { "deploy APP AREA ENV TAG " => "Executa deploy"}
       )
 
+      # Not in use
       def teste
         p "teste"
         config.deploy_tree.each do |key, value|
