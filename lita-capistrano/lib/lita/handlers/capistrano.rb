@@ -1,7 +1,8 @@
+require 'net/ssh'
+
 module Lita
   module Handlers
     class Capistrano < Handler
-      require 'net/ssh'
 
       config :server, type: String, required: true
       config :server_user, type: String, required: true
@@ -14,16 +15,29 @@ module Lita
       route(
         /^deploy\s+list/,
         :deploy_list, command: false,
-        restrict_to: [:admins, :deploy_test],
+        restrict_to: [:admins, :deploy],
         help: { "deploy list [APP] " => "List available apps for deploy"}
       )
 
       route(
         /^deploy\s+(.+)\s+(.+)\s+(.+)\s+(.+)/,
         :deploy_request, command: true,
-        restrict_to: [:admins, :deploy_test],
+        restrict_to: [:admins, :deploy],
         help: { "deploy APP AREA ENV TAG " => "Executa deploy"}
       )
+
+      # Not in use
+      def teste
+        p "teste"
+        config.deploy_tree.each do |key, value|
+          route(
+            /^deploy\s+#{key.to_s}\s+(.+)\s+(.+)\s+(.+)/,
+            :deploy_request, command: true,
+            restrict_to: [:admins, value[:deploy_group]],
+            help: { "deploy #{key.to_s} AREA ENV TAG " => "Executa deploy"}
+          )
+        end
+      end
 
       def deploy_list_apps(response)
         response.reply_privately('Available apps:')
