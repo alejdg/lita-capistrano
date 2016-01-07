@@ -19,12 +19,6 @@ module Lita
         define_dinamic_routes(config.deploy_tree)
       end
 
-
-      def deploy_list_apps(response)
-        response.reply_privately('Available apps:')
-        response.reply_privately(config.deploy_tree.keys)
-      end
-
       def deploy_list(response)
         requested_app = response.args[1]
         if requested_app.nil?
@@ -33,6 +27,17 @@ module Lita
         else
           app_tree = get_app_tree(config.deploy_tree[requested_app.to_sym])
           response.reply_privately("Available tree for #{requested_app}: \n #{app_tree}")
+        end
+      end
+
+      def deploy_auth_list(response)
+        requested_app = response.args[2]
+        if requested_app.nil?
+          apps_auth_tree = get_apps_auth_groups(config.deploy_tree)
+          response.reply_privately("Auth groups for apps:\n#{apps_auth_tree}")
+        else
+          app_tree = get_app_auth_group(config.deploy_tree[requested_app.to_sym])
+          response.reply_privately("Auth group needed to deploy #{requested_app}: \n #{app_tree}")
         end
       end
 
@@ -66,6 +71,22 @@ module Lita
         app_tree = {}
         config_tree.each do |key, value|
           app_tree.store(key.to_s, value[:envs].map { |e| ">#{e}\n" }.join)
+        end
+        app_tree.flatten.map { |e| "#{e}\n" }.join
+      end
+
+      def get_apps_auth_groups(config_tree)
+        app_tree = {}
+        config_tree.each do |key, value|
+          app_tree.store(key.to_s, value.map { |e| ">#{e[0]}: #{e[1][:auth_group]}\n" }.join)
+        end
+        app_tree.flatten.map { |e| "#{e}\n" }.join
+      end
+
+      def get_app_auth_group(config_tree)
+        app_tree = []
+        config_tree.each do |key, value|
+          app_tree << "#{key.to_s}: #{value[:auth_group]}"
         end
         app_tree.flatten.map { |e| "#{e}\n" }.join
       end
@@ -152,6 +173,12 @@ module Lita
           command: false,
           help: { "deploy list [APP] " => "List available apps for deploy"}
         )
+        self.class.route(
+          %r{^deploy\s+auth\s+list},
+          :deploy_auth_list,
+          command: false,
+          help: { "deploy auth list [APP] " => "List available apps for deploy"}
+        )
       end
 
       def define_dinamic_routes(deploy_tree)
@@ -161,7 +188,7 @@ module Lita
               %r{^deploy\s+(#{app})\s+(#{area})\s+(.+)\s+(.+)},
               :deploy_request,
               command: true,
-              restrict_to: [:admins, value[:deploy_group]],
+              restrict_to: [:admins, value[:auth_group]],
               help: { "deploy #{app} #{area} ENV TAG " => "Executa deploy da app #{app} na area #{area}"}
             )
           end
