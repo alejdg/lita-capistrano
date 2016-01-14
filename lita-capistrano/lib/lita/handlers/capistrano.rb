@@ -9,39 +9,14 @@ module Lita
       config :server_password, type: String, required: true
       config :deploy_tree, type: Hash, required: true
 
+      on :loaded, :define_routes
+
       on :deploy_checked, :deploy_exec
       on :deploy_aborted, :deploy_abort
 
-      route(
-        /^deploy\s+list/,
-        :deploy_list, command: false,
-        restrict_to: [:admins, :deploy],
-        help: { "deploy list [APP] " => "List available apps for deploy"}
-      )
-
-      route(
-        /^deploy\s+(.+)\s+(.+)\s+(.+)\s+(.+)/,
-        :deploy_request, command: true,
-        restrict_to: [:admins, :deploy],
-        help: { "deploy APP AREA ENV TAG " => "Executa deploy"}
-      )
-
-      # Not in use
-      def teste
-        p "teste"
-        config.deploy_tree.each do |key, value|
-          route(
-            /^deploy\s+#{key.to_s}\s+(.+)\s+(.+)\s+(.+)/,
-            :deploy_request, command: true,
-            restrict_to: [:admins, value[:deploy_group]],
-            help: { "deploy #{key.to_s} AREA ENV TAG " => "Executa deploy"}
-          )
-        end
-      end
-
-      def deploy_list_apps(response)
-        response.reply_privately('Available apps:')
-        response.reply_privately(config.deploy_tree.keys)
+      def define_routes(payload)
+        define_static_routes
+        define_dinamic_routes(config.deploy_tree)
       end
 
       def deploy_list(response)
@@ -52,6 +27,17 @@ module Lita
         else
           app_tree = get_app_tree(config.deploy_tree[requested_app.to_sym])
           response.reply_privately("Available tree for #{requested_app}: \n #{app_tree}")
+        end
+      end
+
+      def deploy_auth_list(response)
+        requested_app = response.args[2]
+        if requested_app.nil?
+          apps_auth_tree = get_apps_auth_groups(config.deploy_tree)
+          response.reply_privately("Auth groups for apps:\n#{apps_auth_tree}")
+        else
+          app_tree = get_app_auth_group(config.deploy_tree[requested_app.to_sym])
+          response.reply_privately("Auth group needed to deploy #{requested_app}: \n #{app_tree}")
         end
       end
 
@@ -85,6 +71,22 @@ module Lita
         app_tree = {}
         config_tree.each do |key, value|
           app_tree.store(key.to_s, value[:envs].map { |e| ">#{e}\n" }.join)
+        end
+        app_tree.flatten.map { |e| "#{e}\n" }.join
+      end
+
+      def get_apps_auth_groups(config_tree)
+        app_tree = {}
+        config_tree.each do |key, value|
+          app_tree.store(key.to_s, value.map { |e| ">#{e[0]}: #{e[1][:auth_group]}\n" }.join)
+        end
+        app_tree.flatten.map { |e| "#{e}\n" }.join
+      end
+
+      def get_app_auth_group(config_tree)
+        app_tree = []
+        config_tree.each do |key, value|
+          app_tree << "#{key.to_s}: #{value[:auth_group]}"
         end
         app_tree.flatten.map { |e| "#{e}\n" }.join
       end
@@ -162,6 +164,37 @@ module Lita
         end
       end
 
+      private
+
+      def define_static_routes
+        self.class.route(
+          %r{^deploy\s+list},
+          :deploy_list,
+          command: false,
+          help: { "deploy list [APP] " => "List available apps for deploy"}
+        )
+        self.class.route(
+          %r{^deploy\s+auth\s+list},
+          :deploy_auth_list,
+          command: false,
+          help: { "deploy auth list [APP] " => "List available apps for deploy"}
+        )
+      end
+
+      def define_dinamic_routes(deploy_tree)
+        deploy_tree.each do |app, areas|
+          areas.each do |area, value|
+            self.class.route(
+              %r{^deploy\s+(#{app})\s+(#{area})\s+(.+)\s+(.+)},
+              :deploy_request,
+              command: true,
+              restrict_to: [:admins, value[:auth_group]],
+              help: { "deploy #{app} #{area} ENV TAG " => "Executa deploy da app #{app} na area #{area}"}
+            )
+          end
+        end
+      end
+
       def deploy(dir, env, tag)
         output = ssh_exec("cd #{dir}; cap #{env} deploy tag=#{tag}")
       end
@@ -173,8 +206,8 @@ module Lita
         end
         @output
       end
-
-      Lita.register_handler(self)
     end
+
+    Lita.register_handler(Capistrano)
   end
 end

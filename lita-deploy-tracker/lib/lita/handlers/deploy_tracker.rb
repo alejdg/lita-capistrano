@@ -46,7 +46,6 @@ module Lita
           status: payload[:status]
         })
         db[:deploys].find().each do |doc|
-          p doc
         end
 
       end

@@ -1,9 +1,10 @@
 Gem::Specification.new do |spec|
   spec.name          = "lita-deploy-tracker"
-  spec.version       = "0.1.0"
+  spec.version       = "0.1.1"
   spec.authors       = ["Alexandre Gomes"]
   spec.email         = ["alejdg@outlook.com.br"]
   spec.summary       = "A Lita handler to track deploys"
+  spec.description   = "A Lita handler to track deploys"
   spec.homepage      = "https://github.com/alejdg/lita-deploy-tracker.git"
   spec.metadata      = { "lita_plugin_type" => "handler" }
 
@@ -13,6 +14,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_runtime_dependency "lita", ">= 4.6"
+  spec.add_runtime_dependency "mongo", "~> 2.1"
 
   spec.add_development_dependency "bundler", "~> 1.3"
   spec.add_development_dependency "pry-byebug"

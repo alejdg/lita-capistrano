@@ -15,6 +15,7 @@ gem "lita"
 #
 
 gem "lita-slack"
-gem "lita-capistrano"
+# gem "lita-capistrano"
+# gem "lita-deploy-tracker"
 gem "net-ssh"
 gem 'mongo', '~> 2.1'

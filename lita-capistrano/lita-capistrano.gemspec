@@ -1,9 +1,10 @@
 Gem::Specification.new do |spec|
   spec.name          = "lita-capistrano"
-  spec.version       = "0.1.1"
+  spec.version       = "0.1.2"
   spec.authors       = ["Alexandre Gomes"]
   spec.email         = ["alejdg@outlook.com.br"]
   spec.summary       = "A Lita handler to integrate with Capistrano.rb"
+  spec.description   = "A Lita handler to integrate with Capistrano.rb"
   spec.homepage      = "https://github.com/alejdg/lita-capistrano.git"
   spec.metadata      = { "lita_plugin_type" => "handler" }
 
