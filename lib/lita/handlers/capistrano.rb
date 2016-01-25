@@ -188,7 +188,7 @@ module Lita
               %r{^deploy\s+(#{app})\s+(#{area})\s+(.+)\s+(.+)},
               :deploy_request,
               command: true,
-              restrict_to: [:admins, value[:auth_group]],
+              restrict_to: [:admins, value[:auth_group].to_sym],
               help: { "deploy #{app} #{area} ENV TAG " => "Executa deploy da app #{app} na area #{area}"}
             )
           end
