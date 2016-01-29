@@ -109,6 +109,7 @@ module Lita
         tag = payload[:tag]
         response = payload[:response]
         dir = config.deploy_tree[app.to_sym][area.to_sym][:dir]
+        target = response.message.source.room_object
 
         # Deploy start
         response.reply("#{response.user.mention_name}: Deploy da tag #{tag} iniciado no ambiente #{env}.")
@@ -126,9 +127,10 @@ module Lita
         # After deploy stopped
         finish_time =Time.now
 
-        # The deploy:restart could be in two positions depending on the
-        # capistrano config
-        if (output.lines.last.include? "deploy:restart") || (output.lines.last(5)[0].include? "deploy:restart")
+        msg_components = {}
+
+        # Send back a message indicating the deploy status
+        if (!output[:error])
           robot.trigger(:deploy_finished,
                         app: app,
                         area: area,
@@ -138,8 +140,10 @@ module Lita
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'success')
-        return response.reply("#{response.user.mention_name}: Deploy da tag #{tag} no ambiente #{env} realizado com sucesso!")
-        elsif output.lines.last.include? "status code 32768"
+        msg_components = {title: "Finalizado com sucesso!",
+                          color: "good",
+                          text: ""}
+      elsif output[:data].lines.last.include? "status code 32768"
           robot.trigger(:deploy_finished,
                         app: app,
                         area: area,
@@ -149,7 +153,9 @@ module Lita
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'invalid tag')
-          return response.reply("#{response.user.mention_name}: A tag #{tag} informada não existe. Deploy não realizado.")
+          msg_components = {title: "A tag informada não existe.",
+                            color: "warning",
+                            text: ""}
         else
           robot.trigger(:deploy_finished,
                         app: app,
@@ -160,7 +166,29 @@ module Lita
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'error')
-          return response.reply("#{response.user.mention_name}: Ocorreu um erro na execução do deploy da tag #{tag} no ambiente #{env}.")
+          msg_components = {title: "Error!",
+                            color: "danger",
+                            text: output[:data]}
+        end
+
+        # generate the Attachment for slack
+        attachment = gen_deploy_msg(msg_components[:title],
+                            msg_components[:color],
+                            msg_components[:data],
+                            response.user.mention_name,
+                            app,
+                            area,
+                            env,
+                            tag)
+
+        # Default message for other adaters
+        message = "Deploy - #{msg_components[:title]}. #{msg_components[:data]}"
+
+        case robot.config.robot.adapter
+        when :slack
+          return robot.chat_service.send_attachments(target, attachment)
+        else
+          robot.send_message(target, message)
         end
       end
 
@@ -202,10 +230,50 @@ module Lita
       def ssh_exec(cmd)
         #TODO tornar acesso ao servidor dinamico entro prod e test
         Net::SSH.start(config.server, config.server_user, :password => config.server_password) do |ssh|
-          @output = ssh.exec!(cmd)
+          # @output = ssh.exec!(cmd)
+          ssh.exec! cmd do |ch, stream, data|
+            if stream == :stderr
+              @output = {data: "#{data}", error: true}
+            else
+              @output = {data: "#{data}", error: false}
+            end
+          end
         end
         @output
       end
+
+
+      def gen_deploy_msg (title, color, body, user, app, area, env, tag)
+        msg = Adapters::Slack::Attachment.new(
+          body,
+          title: "Deploy - #{title}",
+          color: "#{color}",
+          pretext: "@#{user}:",
+          fields: [
+            {
+              title: "App",
+              value: app,
+              short: true
+            },
+            {
+              title: "Área",
+              value: area,
+              short: true
+            },
+            {
+              title: "Ambiente",
+              value: env,
+              short: true
+            },
+            {
+              title: "tag",
+              value: tag,
+              short: true
+            },
+          ]
+        )
+      end
+
     end
 
     Lita.register_handler(Capistrano)
