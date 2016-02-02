@@ -46,6 +46,14 @@ module Lita
         area = response.matches[0][1]
         env = response.matches[0][2]
         tag = response.matches[0][3]
+        allowed_channel = config.deploy_tree[app.to_sym][area.to_sym][:channel]
+        room_id = response.message.source.room_object.id
+
+        # Do not deploy if not in the right channel, only if channel is
+        # set in config.
+        if !allowed_channel.nil? && !allowed_room?(room_id, allowed_channel)
+          return response.reply("Deploy da app #{app} #{area} permitido somente no canal ##{allowed_channel}")
+        end
 
         unless area_exists?(area)
           return response.reply("A área informada é inválida.")
@@ -272,6 +280,12 @@ module Lita
             },
           ]
         )
+      end
+
+      def allowed_room?(room_id, allowed_channel)
+        room = Lita::Room.find_by_id(room_id)
+        return false if room.nil?
+        return true if room.metadata["name"] == allowed_channel
       end
 
     end
