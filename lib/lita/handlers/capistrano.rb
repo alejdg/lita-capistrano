@@ -67,7 +67,6 @@ module Lita
         deploy_in_progress?(app, area, env, tag, response)
       end
 
-
       def area_exists?(area)
         config.deploy_tree[:commerce].include?(area.to_sym)
       end
@@ -121,8 +120,16 @@ module Lita
         responsible_user = response.user.mention_name
         target = response.message.source.room_object
 
-        # Deploy start
-        response.reply("#{responsible_user}: Deploy da tag #{tag} iniciado no ambiente #{env}.")
+        # Default initial message
+        initial_message = "#{responsible_user}: Deploy da tag #{tag} iniciado no ambiente #{env}."
+
+        if (tag == "rollback")
+          # Change the initial message in case of rollback
+          initial_message = "#{responsible_user}: Rollback iniciado no ambiente #{env}."
+        end
+
+        # Deploy/Rollback start
+        response.reply(initial_message)
         start_time = Time.now
         robot.trigger(:deploy_started,
                       app: app,
@@ -132,15 +139,21 @@ module Lita
                       responsible: responsible_user,
                       start_time: start_time)
 
-        # Deploy execution
-        output = deploy(dir, env, tag)
+        # Deploy/Rollback execution
+        output = ""
+        if (tag == "rollback")
+          output = rollback(dir, env)
+        else
+          output = deploy(dir, env, tag)
+        end
+
         # After deploy stopped
         finish_time =Time.now
 
         msg_components = {}
 
         # Send back a message indicating the deploy status
-        if (!output[:error])
+        if !output[:error]
           robot.trigger(:deploy_finished,
                         app: app,
                         area: area,
@@ -184,15 +197,18 @@ module Lita
         # generate the Attachment for slack
         attachment = gen_deploy_msg(msg_components[:title],
                             msg_components[:color],
-                            msg_components[:data],
+                            msg_components[:text],
                             responsible_user,
                             app,
                             area,
                             env,
                             tag)
 
-        # Default message for other adaters
-        message = "Deploy - #{msg_components[:title]}. #{msg_components[:data]}"
+        # Default message for other adapters
+        message = "Deploy - #{msg_components[:title]}. #{msg_components[:text]}"
+        if (tag == "rollback")
+          message = "Rollback - #{msg_components[:title]}. #{msg_components[:text]}"
+        end
 
         case robot.config.robot.adapter
         when :slack
@@ -229,6 +245,7 @@ module Lita
               restrict_to: [:admins, value[:auth_group].to_sym],
               help: { "deploy #{app} #{area} ENV TAG " => "Executa deploy da app #{app} na area #{area}"}
             )
+
           end
         end
       end
@@ -237,20 +254,30 @@ module Lita
         output = ssh_exec("cd #{dir}; cap #{env} deploy tag=#{tag}")
       end
 
+      def rollback(dir, env)
+        output = ssh_exec("cd #{dir}; cap #{env} deploy:rollback")
+      end
+
       def ssh_exec(cmd)
-        #TODO tornar acesso ao servidor dinamico entro prod e test
-        Net::SSH.start(config.server, config.server_user, :password => config.server_password) do |ssh|
-          # @output = ssh.exec!(cmd)
-          ssh.exec! cmd do |ch, stream, data|
-            if stream == :stderr
-              @output = {data: "#{data}", error: true}
-            else
-              @output = {data: "#{data}", error: false}
-            end
-          end
+        Net::SSH.start(config.server, config.server_user, password: config.server_password) do |ssh|
+          exec_ssh(ssh, cmd)
+        end
+      end
+
+      def exec_ssh(ssh, cmd)
+        ssh.exec! cmd do |ch, stream, data|
+          @output = get_deploy_output(stream, data)
         end
         @output
       end
+
+       def get_deploy_output(stream, data)
+         if stream == :stderr
+           { data: "#{data}", error: true }
+         else
+           { data: "#{data}", error: false }
+         end
+       end
 
 
       def gen_deploy_msg (title, color, body, user, app, area, env, tag)
