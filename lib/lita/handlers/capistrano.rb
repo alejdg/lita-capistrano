@@ -62,7 +62,8 @@ module Lita
           return response.reply("O ambiente informado é inválido.")
         end
 
-        # Pre deploy check
+        # Pre deploy check, if no deploy in progress, deploy-tracker will
+        # trigger :deploy_checked to continue the deploy.
         deploy_in_progress?(app, area, env, tag, response)
       end
 
@@ -117,17 +118,18 @@ module Lita
         tag = payload[:tag]
         response = payload[:response]
         dir = config.deploy_tree[app.to_sym][area.to_sym][:dir]
+        responsible_user = response.user.mention_name
         target = response.message.source.room_object
 
         # Deploy start
-        response.reply("#{response.user.mention_name}: Deploy da tag #{tag} iniciado no ambiente #{env}.")
+        response.reply("#{responsible_user}: Deploy da tag #{tag} iniciado no ambiente #{env}.")
         start_time = Time.now
         robot.trigger(:deploy_started,
                       app: app,
                       area: area,
                       env: env,
                       tag: tag,
-                      responsible: response.user.mention_name,
+                      responsible: responsible_user,
                       start_time: start_time)
 
         # Deploy execution
@@ -144,7 +146,7 @@ module Lita
                         area: area,
                         env: env,
                         tag: tag,
-                        responsible: response.user.mention_name,
+                        responsible: responsible_user,
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'success')
@@ -157,7 +159,7 @@ module Lita
                         area: area,
                         env: env,
                         tag: tag,
-                        responsible: response.user.mention_name,
+                        responsible: responsible_user,
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'invalid tag')
@@ -170,7 +172,7 @@ module Lita
                         area: area,
                         env: env,
                         tag: tag,
-                        responsible: response.user.mention_name,
+                        responsible: responsible_user,
                         start_time: start_time,
                         finish_time: finish_time,
                         status: 'error')
@@ -183,7 +185,7 @@ module Lita
         attachment = gen_deploy_msg(msg_components[:title],
                             msg_components[:color],
                             msg_components[:data],
-                            response.user.mention_name,
+                            responsible_user,
                             app,
                             area,
                             env,
