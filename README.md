@@ -2,7 +2,7 @@
 
 [![Gem Version](https://badge.fury.io/rb/lita-capistrano.png)](http://badge.fury.io/rb/lita-capistrano)
 
-**lita-capistrano** is a hanlder for [Lita](https://www.lita.io/) that allows you to use make deploys through your robot.
+**lita-capistrano** is a handler for [Lita](https://www.lita.io/) that allows you to use make deploys through your robot.
 
 ## Requirements
 
