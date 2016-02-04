@@ -231,7 +231,7 @@ module Lita
           %r{^deploy\s+auth\s+list},
           :deploy_auth_list,
           command: false,
-          help: { "deploy auth list [APP] " => "List available apps for deploy"}
+          help: { "deploy auth list [APP] " => "List required auth groups to deploy"}
         )
       end
 
