@@ -4,9 +4,9 @@ Lita.load_locales Dir[File.expand_path(
   File.join("..", "..", "locales", "*.yml"), __FILE__
 )]
 
-require "lita/handlers/deploy_tracker"
+require "lita/handlers/capistrano"
 
-Lita::Handlers::DeployTracker.template_root File.expand_path(
+Lita::Handlers::Capistrano.template_root File.expand_path(
   File.join("..", "..", "templates"),
  __FILE__
 )
