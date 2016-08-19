@@ -55,10 +55,10 @@ module Lita
           return response.reply("Deploy da app #{app} #{area} permitido somente no canal ##{allowed_channel}")
         end
 
-        unless area_exists?(area)
+        unless area_exists?(app, area)
           return response.reply("A área informada é inválida.")
         end
-        unless env_exists?(area, env)
+        unless env_exists?(app, area, env)
           return response.reply("O ambiente informado é inválido.")
         end
 
@@ -67,12 +67,12 @@ module Lita
         deploy_in_progress?(app, area, env, tag, response)
       end
 
-      def area_exists?(area)
-        config.deploy_tree[:commerce].include?(area.to_sym)
+      def area_exists?(app, area)
+        config.deploy_tree[app.to_sym].include?(area.to_sym)
       end
 
-      def env_exists?(area, env)
-        config.deploy_tree[:commerce][area.to_sym][:envs].include?(env)
+      def env_exists?(app, area, env)
+        config.deploy_tree[app.to_sym][area.to_sym][:envs].include?(env)
       end
 
       def get_app_tree(config_tree)
@@ -315,6 +315,10 @@ module Lita
         room = Lita::Room.find_by_id(room_id)
         return false if room.nil?
         return true if room.metadata["name"] == allowed_channel
+      end
+
+      def remind()
+        config
       end
 
     end
