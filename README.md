@@ -2,11 +2,19 @@
 
 [![Gem Version](https://badge.fury.io/rb/lita-capistrano.png)](http://badge.fury.io/rb/lita-capistrano)
 
-**lita-capistrano** is a handler for [Lita](https://www.lita.io/) that allows you to use make deploys through your robot.
+**lita-capistrano** is a handler for [Lita](https://www.lita.io/) that allows you to make deploys through your robot.
+
+## Features
+
+* Deploy and rollback.
+
+* Permission groups and allowed rooms for deploy based on apps.
+
+* Set reminders to deploy to environments after a sucessful deploy.
 
 ## Requirements
 
-In order to **lita-capistrano** to identify a good deploy from a failed one, you capistrano script should always end with a message.
+In order to **lita-capistrano** to identify a good deploy from a failed one, your capistrano script should always end with a message.
 
 ## Installation
 
@@ -28,6 +36,10 @@ gem "lita-capistrano"
 
 * `deploy_tree` (String) – A json configuration of how deploys work.
 
+### Optional attributes
+
+* `slack_api_token` (String) – The slack api token. Only necessary if using Slack reminders
+
 ### Example
 
 ``` ruby
@@ -35,6 +47,8 @@ Lita.configure do |config|
   config.handlers.capistrano.server = "capistrano-deploy.com"
   config.handlers.capistrano.server_user = "lita"
   config.handlers.capistrano.server_password = "secret"
+  config.handlers.capistrano.slack_api_token = "super-long-token-for-slack-api"  # not required, if not using Slack reminders
+
 end
 
 config.handlers.capistrano.deploy_tree = {
@@ -66,7 +80,12 @@ config.handlers.capistrano.deploy_tree = {
       envs: [
         "dc1",
         "dc2"
-      ]
+      ],
+      reminders: {
+        dc1: {
+          dc2: "2 hours" # Set a reminder to deploy to dc2 after 2 hours from the dc1 deploy success.
+          }  
+      }
     }
   }
 ```

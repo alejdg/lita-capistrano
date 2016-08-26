@@ -1,4 +1,5 @@
 require 'net/ssh'
+require 'slack'
 
 module Lita
   module Handlers
@@ -8,11 +9,13 @@ module Lita
       config :server_user, type: String, required: true
       config :server_password, type: String, required: true
       config :deploy_tree, type: Hash, required: true
+      config :slack_api_token, type: String, required: false
 
       on :loaded, :define_routes
 
       on :deploy_checked, :deploy_exec
       on :deploy_aborted, :deploy_abort
+      on :deploy_finished, :remind_next_deploy
 
       def define_routes(payload)
         define_static_routes
@@ -55,10 +58,10 @@ module Lita
           return response.reply("Deploy da app #{app} #{area} permitido somente no canal ##{allowed_channel}")
         end
 
-        unless area_exists?(area)
+        unless area_exists?(app, area)
           return response.reply("A área informada é inválida.")
         end
-        unless env_exists?(area, env)
+        unless env_exists?(app, area, env)
           return response.reply("O ambiente informado é inválido.")
         end
 
@@ -67,12 +70,12 @@ module Lita
         deploy_in_progress?(app, area, env, tag, response)
       end
 
-      def area_exists?(area)
-        config.deploy_tree[:commerce].include?(area.to_sym)
+      def area_exists?(app, area)
+        config.deploy_tree[app.to_sym].include?(area.to_sym)
       end
 
-      def env_exists?(area, env)
-        config.deploy_tree[:commerce][area.to_sym][:envs].include?(env)
+      def env_exists?(app, area, env)
+        config.deploy_tree[app.to_sym][area.to_sym][:envs].include?(env)
       end
 
       def get_app_tree(config_tree)
@@ -218,6 +221,23 @@ module Lita
         end
       end
 
+      def remind_next_deploy(payload)
+        deploy_status = payload[:status]
+        if slack_api_configured? && deploy_status == "success"
+          app = payload[:app]
+          area = payload[:area]
+          env = payload[:env]
+          tag =  payload[:tag]
+          responsible = payload[:responsible]
+          reminders = get_reminders(app, area, env)
+          if reminders
+            reminders.each do |env, time|
+              set_deploy_reminder(responsible, app, area, env, tag, time)
+            end
+          end
+        end
+      end
+
       private
 
       def define_static_routes
@@ -315,6 +335,25 @@ module Lita
         room = Lita::Room.find_by_id(room_id)
         return false if room.nil?
         return true if room.metadata["name"] == allowed_channel
+      end
+
+      def get_reminders(app, area, env)
+        config.deploy_tree[app.to_sym][area.to_sym][:reminders][env.to_sym]
+      rescue
+          false
+      end
+
+      def set_deploy_reminder(target_user, app, area, env, tag, time)
+        slack = Slack::API.new(token: config.slack_api_token)
+        target = Lita::User.find_by_mention_name(target_user).id
+        todo_action = "Fazer deploy da app #{app} #{env} tag:#{tag}"
+        slack.reminders_add(text: todo_action, time: time, user: target)
+      end
+
+      def slack_api_configured?
+        config.slack_api_token
+      rescue
+        config.slack_api_token ||= false
       end
 
     end
